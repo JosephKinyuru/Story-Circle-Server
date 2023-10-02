@@ -9,6 +9,7 @@ flask-restful = "*"
 flask-migrate = "*"
 flask-marshmallow = "*"
 flask-sqlalchemy = "*"
+flask-jwt-extended = "*"
 
 [dev-packages]
 
