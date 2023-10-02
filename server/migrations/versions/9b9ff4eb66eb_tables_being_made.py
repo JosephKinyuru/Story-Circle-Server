@@ -1,8 +1,8 @@
 """Tables being made
 
-Revision ID: 592e3856d9b9
+Revision ID: 9b9ff4eb66eb
 Revises: 
-Create Date: 2023-10-02 15:33:45.741875
+Create Date: 2023-10-02 18:46:31.689268
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '592e3856d9b9'
+revision = '9b9ff4eb66eb'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -29,7 +29,7 @@ def upgrade():
     )
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('username', sa.String(), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('password', sa.String(), nullable=False),
     sa.Column('first_name', sa.String(), nullable=True),
@@ -38,7 +38,7 @@ def upgrade():
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name')
+    sa.UniqueConstraint('username')
     )
     op.create_table('book_comments',
     sa.Column('id', sa.Integer(), nullable=False),
