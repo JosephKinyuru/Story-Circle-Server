@@ -17,6 +17,12 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
+    @validates('email')
+    def validate_email(self, key, address):
+        if '@' not in address:
+            raise ValueError("failed simple email validation")
+        return address
+
 class BookClub(db.Model):
     __tablename__ = 'bookclubs'
 
@@ -73,7 +79,6 @@ class BookComment(db.Model):
     __tablename__ = 'book_comments'
 
     id = db.Column(db.Integer, primary_key=True)
-    club_id = db.Column(db.Integer, db.ForeignKey('bookclubs.id'))
     book_id = db.Column(db.Integer, db.ForeignKey('books.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id')) 
     comment = db.Column(db.String, nullable=False)
@@ -81,7 +86,6 @@ class BookComment(db.Model):
 
     user = db.relationship('User', backref=db.backref('book_comments', lazy=True)) 
     book = db.relationship('Book', backref=db.backref('book_comments', lazy=True))
-    club = db.relationship('BookClub', backref=db.backref('book_comments', lazy=True))
 
     @validates('rating')
     def validate_price(self, key, rating):

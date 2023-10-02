@@ -1,8 +1,8 @@
 """Tables being made
 
-Revision ID: e5381a6373fc
+Revision ID: 592e3856d9b9
 Revises: 
-Create Date: 2023-10-02 15:19:09.695433
+Create Date: 2023-10-02 15:33:45.741875
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'e5381a6373fc'
+revision = '592e3856d9b9'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -40,6 +40,16 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
+    op.create_table('book_comments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('book_id', sa.Integer(), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('comment', sa.String(), nullable=False),
+    sa.Column('rating', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['book_id'], ['books.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('bookclubs',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
@@ -51,18 +61,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['creator_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
-    )
-    op.create_table('book_comments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('club_id', sa.Integer(), nullable=True),
-    sa.Column('book_id', sa.Integer(), nullable=True),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('comment', sa.String(), nullable=False),
-    sa.Column('rating', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['book_id'], ['books.id'], ),
-    sa.ForeignKeyConstraint(['club_id'], ['bookclubs.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('club_members',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -108,8 +106,8 @@ def downgrade():
     op.drop_table('messages')
     op.drop_table('current_books')
     op.drop_table('club_members')
-    op.drop_table('book_comments')
     op.drop_table('bookclubs')
+    op.drop_table('book_comments')
     op.drop_table('users')
     op.drop_table('books')
     # ### end Alembic commands ###
