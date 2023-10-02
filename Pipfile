@@ -10,6 +10,7 @@ flask-migrate = "*"
 flask-marshmallow = "*"
 flask-sqlalchemy = "*"
 flask-jwt-extended = "*"
+requests = "*"
 
 [dev-packages]
 
