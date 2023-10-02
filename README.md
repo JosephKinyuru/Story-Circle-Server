@@ -23,6 +23,8 @@ Group 13
 - Flask-restful
 - PostgreSQL
 - JWT
+- CORS
+- Werkzeug-security
 
 # Lisence
 MIT License
