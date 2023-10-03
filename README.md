@@ -2,9 +2,7 @@
 
 
 # How to launch project
-
-
-**Note** 
+`Warning` This is the server side if you are not a Group 13 member you do not have access to it
 
 # Author
 Group 13
@@ -18,7 +16,6 @@ Group 13
 ## Story Circle
 
 # Project setup
-- React Js
 - Flask
 - Flask-restful
 - PostgreSQL
