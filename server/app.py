@@ -15,6 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///story_circle.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
 
+# Validator for post or patch for profile pic url
 def is_valid_url(url):
     try:
         response = requests.head(url)
@@ -32,8 +33,17 @@ api = Api(app)
 app.config['JWT_SECRET_KEY'] = 'super-secret-key'  # Personal / Owner Key For JWT locked resources
 jwt = JWTManager(app)
 
-class Index(Resource):
+class BookSchema(ma.SQLAlchemyAutoSchema):
 
+    class Meta:
+        model = Book
+        load_instance = True
+
+book_schema = BookSchema()
+books_schema = BookSchema(many=True)
+
+
+class Index(Resource):
     def get(self):
 
         response_dict = {
@@ -97,7 +107,6 @@ class LogIn(Resource):
     def post(self):
         try:
             user = User.query.filter_by(username=request.json['username']).first()
-            print(user)
 
             if user and user.check_password(request.json['password']):
                 # Generating a token for the user
@@ -122,7 +131,6 @@ class LogIn(Resource):
             return response
     
         except Exception as e:
-            print(e)
             response = make_response(
                 jsonify({"errors": ["An error occurred"]}),
                 500
@@ -132,98 +140,683 @@ class LogIn(Resource):
             return response
 
 class Profile(Resource):
-    @jwt_required()  
-    def get(self, user_id):
-        current_user = get_jwt_identity()  # Retrieve the current user's identity from the token
-        if current_user['user_id'] == user_id:  # Check if the user is accessing their own profile
-            user = User.query.get(user_id)
-            if user:
-                response_data = {
-                    "username": user.username,
-                    "email": user.email,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "profile_pic":user.profile_pic
-                }
+    @jwt_required()
+    def get(self, username):
+        current_username = get_jwt_identity()  # Retrieve the current user's identity from the token
 
-                response = make_response(
-                    jsonify(response_data),
-                    200,
-                )
-                response.headers["Content-Type"] = "application/json"
-
-                return response
-            else:
-                response = make_response(jsonify({"message": "User not found"}), 404)
-                response.headers["Content-Type"] = "application/json"
-                return response
-        else:
+        if current_username != username:
             response = make_response(jsonify({"message": "Unauthorized"}), 401)
             response.headers["Content-Type"] = "application/json"
             return response
 
+        user = User.query.filter_by(username=username).first()
+
+        if user:
+            response_data = {
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "profile_pic": user.profile_pic
+            }
+
+            response = make_response(
+                jsonify(response_data),
+                200,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        response = make_response(jsonify({"message": "User not found"}), 404)
+        response.headers["Content-Type"] = "application/json"
+        return response
+
     @jwt_required()
-    def patch(self, user_id):
-        current_user = get_jwt_identity()
-        if current_user['user_id'] == user_id:
-            user = User.query.get(user_id)
-            if user:
+    def patch(self, username):
+        current_username = get_jwt_identity()
 
-                if 'profile_pic' in request.json:
-                    profile_pic_url = request.json['profile_pic']
-                    if not is_valid_url(profile_pic_url):
-                        response = make_response(
-                            jsonify({"errors": ["Invalid profile picture URL"]}),
-                            400
-                        )
-                        response.headers["Content-Type"] = "application/json"
-                        return response
-
-                for attr in request.json:
-                    setattr(user, attr , request.json[attr])
-
-                db.session.add(user)
-                db.session.commit()
-
-                response = make_response(
-                    jsonify({"message": "Profile updated successfully"}),
-                    200,
-                )
-                response.headers["Content-Type"] = "application/json"
-
-                return response
-            else:
-                response = make_response(jsonify({"message": "User not found"}), 404)
-                response.headers["Content-Type"] = "application/json"
-                return response
-        else:
+        if current_username != username:
             response = make_response(jsonify({"message": "Unauthorized"}), 401)
             response.headers["Content-Type"] = "application/json"
             return response
 
+        user = User.query.filter_by(username=username).first()
+
+        if not user:
+            response = make_response(jsonify({"message": "User not found"}), 404)
+            response.headers["Content-Type"] = "application/json"
+            return response
+
+        if 'profile_pic' in request.json:
+            profile_pic_url = request.json['profile_pic']
+            if not is_valid_url(profile_pic_url):
+                response = make_response(
+                    jsonify({"errors": ["Invalid profile picture URL"]}),
+                    400
+                )
+                response.headers["Content-Type"] = "application/json"
+                return response
+
+        for attr in request.json:
+            setattr(user, attr, request.json[attr])
+
+        db.session.add(user)
+        db.session.commit()
+
+        response = make_response(
+            jsonify({"message": "Profile updated successfully"}),
+            200,
+        )
+        response.headers["Content-Type"] = "application/json"
+
+        return response
+
     @jwt_required()
-    def delete(self, user_id):
-        current_user = get_jwt_identity()
-        if current_user['user_id'] == user_id:
-            user = User.query.get(user_id)
-            if user:
-                db.session.delete(user)
+    def delete(self, username):
+        current_username = get_jwt_identity()
+
+        if current_username != username:
+            response = make_response(jsonify({"message": "Unauthorized"}), 401)
+            response.headers["Content-Type"] = "application/json"
+            return response
+
+        user = User.query.filter_by(username=username).first()
+
+        if not user:
+            response = make_response(jsonify({"message": "User not found"}), 404)
+            response.headers["Content-Type"] = "application/json"
+            return response
+
+        db.session.delete(user)
+        db.session.commit()
+
+        response = make_response(
+            jsonify({"message": "Profile deleted successfully"}),
+            200,
+        )
+        response.headers["Content-Type"] = "application/json"
+
+        return response
+
+class BookClubRes(Resource):
+    @jwt_required
+    def post(self):
+        try: 
+            new_club = BookClub(
+                name=request.json['name'],
+                location=request.json['location'],
+                description=request.json['description'],
+                creator_id=request.json['creator_id'],
+            )  
+
+            db.session.add(new_club)
+            db.session.commit()
+
+            response = make_response(
+                jsonify({ "message": "Book Club created successfully"}),
+                201,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+        
+        except IntegrityError as e:
+            db.session.rollback()
+
+            response = make_response(
+                jsonify({"errors": ["Name already exists"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        except Exception as e:
+            db.session.rollback()
+                
+            response = make_response(
+                jsonify({"errors": ["validation errors"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+class BookClubByID(Resource):
+
+    def get(self, id):
+        bookclub = BookClub.query.filter_by(id=id).first()
+
+        if bookclub:
+
+            # Get creator
+            creator = bookclub.creator
+            creator_data = {
+                "id": creator.id if creator else None,
+                "username": creator.username if creator else None
+            }
+
+            # Get club members
+            members = [member.member for member in bookclub.club_members]
+
+            # Get current book
+            current_book = CurrentBook.query.filter_by(club_id=id).first()
+
+            # Get previous books and their comments
+            previous_books = PrevioislyReadBook.query.filter_by(club_id=id).all()
+
+            previous_books_data = []
+            for prev_book in previous_books:
+                book_comments = BookComment.query.filter_by(book_id=prev_book.book_id).all()
+                comment_data = []
+
+            for comment in book_comments:
+                comment_data.append({
+                    "id": comment.id,
+                    "comment": comment.comment,
+                    "rating": comment.rating,
+                     "username": comment.user.username
+                })
+
+            previous_books_data.append({
+                "book": {
+                    "id": prev_book.book.id,
+                    "title": prev_book.book.title,
+                    "author": prev_book.book.author,
+                    "description": prev_book.book.description
+                },
+                "comments": comment_data
+            })
+
+
+            # Get messages
+            messages = Message.query.filter_by(club_id=id).all()
+
+            message_data = []
+            for message in messages:
+                message_data.append({
+                    "id": message.id,
+                    "sender": message.sender.username,
+                    "message": message.message,
+                    "created_at": message.created_at
+                })
+
+            response_data = {
+                "id": bookclub.id,
+                "name": bookclub.name,
+                "location": bookclub.location,
+                "description": bookclub.description,
+                "creator": creator_data,
+                "members": [{
+                    "id": member.id,
+                    "username": member.username
+                } for member in members],
+                "current_book": {
+                    "id": current_book.book.id,
+                    "title": current_book.book.title,
+                    "author": current_book.book.author,
+                    "description": current_book.book.description
+                } if current_book else None,
+                "previous_books": previous_books_data,
+                "messages": message_data
+            }
+
+            response = make_response(
+                jsonify(response_data),
+                200,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        else:
+            response = make_response(
+                jsonify({"error": "Book Club not found"}),
+                404
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+    @jwt_required
+    def patch(self, id):
+        bookclub = BookClub.query.filter_by(id=id).first()
+
+        if bookclub :
+            for attr in request.json:
+                setattr(bookclub, attr, request.json[attr])
+
+            db.session.add(bookclub)
+            db.session.commit()
+
+            response = make_response(
+                jsonify({{"message": "Book Club updated successfully"}}),
+                200
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        
+        else :
+            response = make_response(
+                jsonify({"error": "BookClub not found"}),
+                404
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+        
+    @jwt_required()
+    def delete(self, id):
+        current_user_username = get_jwt_identity()  # Retrieve the current user's username from the token
+
+        # Query the User table to get the user object based on the username
+        current_user = User.query.filter_by(username=current_user_username).first()
+
+        if current_user:
+            # Check if the book club exists and if the current user is its creator
+            bookclub = BookClub.query.filter_by(id=id, creator_id=current_user.id).first()
+
+            if bookclub:
+                db.session.delete(bookclub)
                 db.session.commit()
 
                 response = make_response(
-                    jsonify({"message": "Profile deleted successfully"}),
-                    200,
+                    jsonify({"message": "Book Club successfully deleted"}),
+                    200
                 )
-                response.headers["Content-Type"] = "application/json"
-
-                return response
             else:
-                response = make_response(jsonify({"message": "User not found"}), 404)
-                response.headers["Content-Type"] = "application/json"
-                return response
+                response = make_response(
+                    jsonify({"error": "Book Club not found or you are not the creator"}),
+                    404
+                )
         else:
-            response = make_response(jsonify({"message": "Unauthorized"}), 401)
+            response = make_response(
+                jsonify({"error": "Current user not found"}),
+                404
+            )
+
+        response.headers["Content-Type"] = "application/json"
+        return response
+
+class JoinClub(Resource):
+    @jwt_required
+    def post(self):
+        try: 
+            new_member = ClubMember(
+                club_id = request.json['club_id'],
+                member_id = request.json['user_id'],
+            )
+
+            db.session.add(new_member)
+            db.session.commit()
+
+            response = make_response(
+                jsonify({ "message": "Member joined successfully"}),
+                201,
+            )
             response.headers["Content-Type"] = "application/json"
+
+            return response
+        
+        except IntegrityError as e:
+            db.session.rollback()
+
+            response = make_response(
+                jsonify({"errors": ["User or club does not exists"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        except Exception as e:
+            db.session.rollback()
+                
+            response = make_response(
+                jsonify({"errors": ["validation errors"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+class Books(Resource):
+
+    def get(self):
+        books = Book.query.all()
+
+        if books :
+            response = make_response(
+                books_schema.dump(books),
+                200,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+        
+        else :
+            response = make_response(
+                jsonify({"error":" Restaurants are not currently in database"}),
+                  404
+                )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+        
+    @jwt_required
+    def post(self):
+        try:
+            new_book = Book(
+                title=request.json['titlr'],
+                author=request.json['author'],
+                description=request.json['description'],
+            )
+
+            db.session.add(new_book)
+            db.session.commit()
+
+            response = make_response(
+                book_schema.dump(new_book),
+                201,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+        
+        except IntegrityError as e:
+            db.session.rollback()
+
+            response = make_response(
+                jsonify({"errors": ["Book title already exists"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        except Exception as e:
+            db.session.rollback()
+                
+            response = make_response(
+                jsonify({"errors": ["validation errors"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+class BooksByID(Resource):
+
+    def get(self, id):
+        book = Book.query.filter_by(id=id).first()
+
+        if book :
+            book_comments = BookComment.query.filter_by(book_id=id).all()
+            comment_data = []
+
+            for comment in book_comments:
+                    comment_data.append({
+                        "id": comment.id,
+                        "comment": comment.comment,
+                        "rating": comment.rating,
+                        "username":comment.user.username,
+                        "user_profile_pic":comment.user.profile_pic,
+                    })
+
+            response_data = {
+                "id": book.id,
+                "title": book.title,
+                "author": book.author,
+                "description": book.description,
+                "comments": comment_data,
+            }
+
+            response = make_response(
+                jsonify(response_data),
+                200,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+        
+        else :
+            response = make_response(
+                jsonify({"error":" Restaurant not found"}),
+                  404
+                )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+    def patch(self, id):
+        book = Book.query.filter_by(id=id).first()
+
+        if book :
+            for attr in request.json:
+                setattr(book, attr, request.json[attr])
+
+            db.session.add(book)
+            db.session.commit()
+
+            response = make_response(
+                book_schema.dump(book),
+                200
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        
+        else :
+            response = make_response(
+                jsonify({"error": "Restaurant not found"}),
+                404
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+    def delete(self, id):
+        book = Book.query.filter_by(id=id).first()
+
+        if book :
+            db.session.delete(book)
+            db.session.commit()
+
+            response = make_response(
+                jsonify({"message": "Book successfully deleted"}),
+                200
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+        else :
+            response = make_response(
+                jsonify({"error": "Restaurant not found"}),
+                404
+                )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+class AddCurrentBook(Resource):
+    @jwt_required
+    def post(self):
+        try: 
+            new_current_book = CurrentBook(
+                club_id=request.json['club_id'],
+                book_id=request.json['book_id'],
+            )
+
+            db.session.add(new_current_book)
+            db.session.commit()
+
+            response = make_response(
+                jsonify({ "message": "Current created successfully"}),
+                201,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        except Exception as e:
+            db.session.rollback()
+                
+            response = make_response(
+                jsonify({"errors": ["validation errors"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+class DelCurrentBook(Resource):
+    @jwt_required
+    def delete(self, id):
+        currentBook = CurrentBook.query.filter_by(club_id=id).first()
+
+        if currentBook :
+            db.session.delete(currentBook)        
+            db.session.commit()
+
+            response = make_response(
+                jsonify({"message": "Current Book successfully deleted"}),
+                200
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+        else :
+            response = make_response(
+                jsonify({"error": "Current Book not found"}),
+                404
+                )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+class AddPreviousBook(Resource):
+    @jwt_required
+    def post(self):
+        try: 
+            new_previous_book = PrevioislyReadBook(
+                club_id=request.json['club_id'],
+                book_id=request.json['book_id'],
+            )
+
+            db.session.add(new_previous_book)
+            db.session.commit()
+
+            response = make_response(
+                jsonify({ "message": "Previously  Read Book created successfully"}),
+                201,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        except Exception as e:
+            db.session.rollback()
+                
+            response = make_response(
+                jsonify({"errors": ["validation errors"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+class DelPreviousBook(Resource):
+    @jwt_required
+    def delete(self, id):
+        previousBook = PrevioislyReadBook.query.filter_by(club_id=id).first()
+
+        if previousBook :
+            db.session.delete(previousBook)        
+            db.session.commit()
+
+            response = make_response(
+                jsonify({"message": "Previous Book successfully deleted"}),
+                200
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+        else :
+            response = make_response(
+                jsonify({"error": "Previous Book not found"}),
+                404
+                )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+class AddBookComment(Resource):
+    @jwt_required
+    def post(self):
+        try: 
+            new_comment = BookComment(
+                user_id=request.json['user_id'],
+                book_id=request.json['book_id'],
+                comment=request.json['comment'],
+                rating=request.json['rating'],
+            )
+
+            db.session.add(new_comment)
+            db.session.commit()
+
+            response = make_response(
+                jsonify({ "message": "Comment created successfully"}),
+                201,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        except Exception as e:
+            db.session.rollback()
+                
+            response = make_response(
+                jsonify({"errors": ["validation errors"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+class AddMessage(Resource):
+    @jwt_required
+    def post(self):
+        try: 
+            new_message = Message(
+                sender_id=request.json['user_id'],
+                club_id=request.json['club_id'],
+                message=request.json['message'],
+            )
+
+            db.session.add(new_message)
+            db.session.commit()
+
+            response = make_response(
+                jsonify({ "message": "Message created successfully"}),
+                201,
+            )
+            response.headers["Content-Type"] = "application/json"
+
+            return response
+
+        except Exception as e:
+            db.session.rollback()
+                
+            response = make_response(
+                jsonify({"errors": ["validation errors"]}),
+                400
+            )
+            response.headers["Content-Type"] = "application/json"
+
             return response
 
 
@@ -231,7 +824,21 @@ class Profile(Resource):
 api.add_resource(Index, '/')
 api.add_resource(Register, '/register')
 api.add_resource(LogIn, '/login')
-api.add_resource(Profile, '/profile/<int:user_id>')
+api.add_resource(Profile, '/profile/<string:username>')
+api.add_resource(BookClubRes, '/bookclub')
+api.add_resource(BookClubByID, '/bookclub/<int:id>')
+api.add_resource(JoinClub, '/joinclub')
+api.add_resource(Books, '/books')
+api.add_resource(BooksByID, '/books/<int:id>')
+api.add_resource(AddCurrentBook, '/currentbook')
+api.add_resource(DelCurrentBook, '/currentbook/<int:id>')  # The id is the club ID
+api.add_resource(AddPreviousBook, '/previousbooks')
+api.add_resource(DelPreviousBook, '/previousbooks/<int:id>')  # The id is the club ID
+api.add_resource(AddBookComment, '/bookcomments')
+api.add_resource(AddMessage, '/messages')
+
+
+
 
 @app.errorhandler(NotFound)
 def handle_not_found(e):
