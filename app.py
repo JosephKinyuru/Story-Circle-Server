@@ -13,7 +13,7 @@ from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, creat
 from models import db , User , BookClub , ClubMember , Book , CurrentBook , PrevioislyReadBook , BookComment , Message
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///story_circle.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
 
