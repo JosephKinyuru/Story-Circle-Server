@@ -37,9 +37,10 @@ with app.app_context():
     bookclubs = []
     for i in range(25):
         bookclub = BookClub(
-            name=fake.unique.first_name(),
-            location = fake.address(),
+            name=fake.company(),
+            location = fake.city(),
             description=fake.paragraph(nb_sentences=5),
+            creator_id = fake.random_element(elements=users).id, 
         )
         bookclubs.append(bookclub)
 
@@ -74,7 +75,7 @@ with app.app_context():
     books = []
     for i in range(50):
         book = Book(
-            title=fake.unique.first_name(),
+            title=fake.word() + " " + fake.word(),
             author=fake.name(),
             description = fake.paragraph(nb_sentences=5),
         )

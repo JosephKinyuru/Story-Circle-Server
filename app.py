@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, jsonify, request, make_response
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
@@ -23,14 +25,14 @@ def is_valid_url(url):
     except Exception as e:
         return False
 
-# CORS(app)
-# CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+CORS(app)
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
 migrate = Migrate(app, db)
 db.init_app(app)
 ma = Marshmallow(app)
 api = Api(app)
-app.config['JWT_SECRET_KEY'] = 'super-secret-key'  # Personal / Owner Key For JWT locked resources
+app.config['JWT_SECRET_KEY'] = '$2a$10$Xs1h0711a6I8n4c9179t0u.h773sj7/Xc2.0737j5r6v996349/Hm0j6z3yM'  # Personal / Owner Key For JWT locked resources
 jwt = JWTManager(app)
 
 class BookSchema(ma.SQLAlchemyAutoSchema):
@@ -41,6 +43,16 @@ class BookSchema(ma.SQLAlchemyAutoSchema):
 
 book_schema = BookSchema()
 books_schema = BookSchema(many=True)
+
+class BookClubSchema(ma.SQLAlchemyAutoSchema):
+
+    class Meta:
+        model = BookClub
+        load_instance = True
+
+bookClub_schema = BookClubSchema()
+bookClubs_schema = BookClubSchema(many=True)
+
 
 
 class Index(Resource):
@@ -116,6 +128,7 @@ class LogIn(Resource):
                     jsonify({
                         "access_token": access_token, 
                         "message": "Login successful",
+                        "user_id": user.id , 
                         }),
                     200,
                 )
@@ -283,6 +296,33 @@ class BookClubRes(Resource):
 
             return response
 
+    def get(self):
+        try:
+            bookclubs = BookClub.query.all()
+
+            if bookclubs:
+                response = make_response(
+                    bookClubs_schema.dump(bookclubs),
+                    200,
+                )
+                response.headers["Content-Type"] = "application/json"
+                return response
+            else:
+                response = make_response(
+                    jsonify({"error": "Book Clubs are not currently in database"}),
+                    404
+                )
+                response.headers["Content-Type"] = "application/json"
+                return response
+        except Exception as e:
+            # Handle unexpected server errors
+            response = make_response(
+                jsonify({"error": "An unexpected error occurred on the server"}),
+                500
+            )
+            response.headers["Content-Type"] = "application/json"
+            return response
+
 class BookClubByID(Resource):
 
     def get(self, id):
@@ -291,11 +331,15 @@ class BookClubByID(Resource):
         if bookclub:
 
             # Get creator
-            creator = bookclub.creator
+            creator = User.query.filter_by(id=bookclub.creator_id).first()
+
             creator_data = {
                 "id": creator.id if creator else None,
-                "username": creator.username if creator else None
+                "username": creator.username if creator else None,
+                "first_name": creator.first_name if creator else None,
+                "last_name": creator.last_name if creator else None
             }
+
 
             # Get club members
             members = [member.member for member in bookclub.club_members]
@@ -306,17 +350,18 @@ class BookClubByID(Resource):
             # Get previous books and their comments
             previous_books = PrevioislyReadBook.query.filter_by(club_id=id).all()
 
-            previous_books_data = []
-            for prev_book in previous_books:
-                book_comments = BookComment.query.filter_by(book_id=prev_book.book_id).all()
-                comment_data = []
+        previous_books_data = []
+
+        for prev_book in previous_books:
+            book_comments = BookComment.query.filter_by(book_id=prev_book.book_id).all()
+            comment_data = []
 
             for comment in book_comments:
                 comment_data.append({
                     "id": comment.id,
                     "comment": comment.comment,
                     "rating": comment.rating,
-                     "username": comment.user.username
+                    "username": comment.user.username
                 })
 
             previous_books_data.append({
@@ -325,10 +370,9 @@ class BookClubByID(Resource):
                     "title": prev_book.book.title,
                     "author": prev_book.book.author,
                     "description": prev_book.book.description
-                },
-                "comments": comment_data
-            })
-
+            } if prev_book.book else None,  # Check if prev_book has an associated book
+            "comments": comment_data
+             })
 
             # Get messages
             messages = Message.query.filter_by(club_id=id).all()
@@ -499,7 +543,7 @@ class Books(Resource):
         
         else :
             response = make_response(
-                jsonify({"error":" Restaurants are not currently in database"}),
+                jsonify({"error":" Books are not currently in database"}),
                   404
                 )
             response.headers["Content-Type"] = "application/json"
@@ -510,7 +554,7 @@ class Books(Resource):
     def post(self):
         try:
             new_book = Book(
-                title=request.json['titlr'],
+                title=request.json['title'],
                 author=request.json['author'],
                 description=request.json['description'],
             )
@@ -825,8 +869,8 @@ api.add_resource(Index, '/')
 api.add_resource(Register, '/register')
 api.add_resource(LogIn, '/login')
 api.add_resource(Profile, '/profile/<string:username>')
-api.add_resource(BookClubRes, '/bookclub')
-api.add_resource(BookClubByID, '/bookclub/<int:id>')
+api.add_resource(BookClubRes, '/clubs')
+api.add_resource(BookClubByID, '/clubs/<int:id>')
 api.add_resource(JoinClub, '/joinclub')
 api.add_resource(Books, '/books')
 api.add_resource(BooksByID, '/books/<int:id>')
@@ -844,12 +888,23 @@ api.add_resource(AddMessage, '/messages')
 def handle_not_found(e):
 
     response = make_response(
-        jsonify({"Not Found": "The requested resource does not exist."}),
+        jsonify({"error": "The requested resource does not exist."}),
         404
     )
     response.headers["Content-Type"] = "application/json"
 
     return response
+
+# @jwt_invalid_token_loader
+# @jwt_expired_token_loader
+# def handle_invalid_token_error(error):
+#     response = make_response(
+#         jsonify({"error": "Invalid or expired token. Please sign in or sign up."}),
+#         401
+#     )
+#     response.headers["Content-Type"] = "application/json"
+#     return response
+
 
 if __name__ == '__main__':
     app.run(port=5555)

@@ -13,7 +13,7 @@ Group 13
 - Paul Gudoi
 
 # Title
-## Story Circle
+## Story Circle (Server side repository)
 
 # Project setup
 - Flask
