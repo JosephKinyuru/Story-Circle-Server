@@ -1,5 +1,5 @@
 # Project Description
-
+This is the server side of story circle it contains the models and endpoints used in the app.
 
 # How to launch project
 `Warning` This is the server side if you are not a Group 13 member you do not have access to it
