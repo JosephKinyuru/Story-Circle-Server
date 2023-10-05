@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-flask = "==3.0.0"
+flask = ">=2.0.2"
 flask-restful = "==0.3.10"
 flask-migrate = "==4.0.5"
 flask-marshmallow = "==0.15.0"
@@ -34,6 +34,7 @@ typing-extensions = "==4.8.0"
 urllib3 = "==2.0.6"
 werkzeug = "==3.0.0"
 flask-cors = "*"
+faker = "*"
 
 [dev-packages]
 
