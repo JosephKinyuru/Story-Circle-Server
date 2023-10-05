@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "46a3d9d2d9645e8bbefdcaa5ea32739e81b431b897b1ad47bc7df56d2ffdcd32"
+            "sha256": "e8f6c73fb535be3b58d0c482e562e3e5d2fc69c08feab60dfa5b86d7170eb4d7"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -152,6 +152,14 @@
             "index": "pypi",
             "version": "==8.1.7"
         },
+        "faker": {
+            "hashes": [
+                "sha256:8fba91068dc26e3159c1ac9f22444a2338704b0991d86605322e454bda420092",
+                "sha256:d5d5953556b0fb428a46019e03fc2d40eab2980135ddef5a9eb3d054947fdf83"
+            ],
+            "index": "pypi",
+            "version": "==19.6.2"
+        },
         "flask": {
             "hashes": [
                 "sha256:21128f47e4e3b9d597a3e8521a329bf56909b690fcc3fa3e477725aa81367638",
@@ -159,6 +167,14 @@
             ],
             "index": "pypi",
             "version": "==3.0.0"
+        },
+        "flask-cors": {
+            "hashes": [
+                "sha256:bc3492bfd6368d27cfe79c7821df5a8a319e1a6d5eab277a3794be19bdc51783",
+                "sha256:f268522fcb2f73e2ecdde1ef45e2fd5c71cc48fe03cffb4b441c6d1b40684eb0"
+            ],
+            "index": "pypi",
+            "version": "==4.0.0"
         },
         "flask-jwt-extended": {
             "hashes": [
@@ -194,11 +210,11 @@
         },
         "flask-sqlalchemy": {
             "hashes": [
-                "sha256:4ba4be7f419dc72f4efd8802d69974803c37259dd42f3913b0dcf75c9447e0a0",
-                "sha256:e4b68bb881802dda1a7d878b2fc84c06d1ee57fb40b874d3dc97dabfa36b8312"
+                "sha256:2764335f3c9d7ebdc9ed6044afaf98aae9fa50d7a074cef55dde307ec95903ec",
+                "sha256:add5750b2f9cd10512995261ee2aa23fab85bd5626061aa3c564b33bb4aa780a"
             ],
             "index": "pypi",
-            "version": "==3.1.1"
+            "version": "==3.0.3"
         },
         "greenlet": {
             "hashes": [
@@ -397,6 +413,14 @@
             ],
             "index": "pypi",
             "version": "==2.8.0"
+        },
+        "python-dateutil": {
+            "hashes": [
+                "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86",
+                "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"
+            ],
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+            "version": "==2.8.2"
         },
         "pytz": {
             "hashes": [
