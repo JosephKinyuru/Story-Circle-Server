@@ -5,7 +5,7 @@ blinker==1.6.2
 certifi==2023.7.22
 charset-normalizer==3.3.0
 click==8.1.7
-flask==3.0.0
+flask>=2.0.2
 flask-cors==4.0.0
 flask-jwt-extended==4.5.3
 flask-marshmallow==0.15.0
