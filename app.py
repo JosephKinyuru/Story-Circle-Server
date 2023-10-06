@@ -18,7 +18,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
 
-# Validator for post or patch for profile pic url
 def is_valid_url(url):
     try:
         response = requests.head(url)
@@ -896,15 +895,46 @@ def handle_not_found(e):
 
     return response
 
-# @jwt_invalid_token_loader
-# @jwt_expired_token_loader
-# def handle_invalid_token_error(error):
-#     response = make_response(
-#         jsonify({"error": "Invalid or expired token. Please sign in or sign up."}),
-#         401
-#     )
-#     response.headers["Content-Type"] = "application/json"
-#     return response
+
+def create_app():
+
+    app = Flask(__name__)
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['JWT_SECRET_KEY'] = '$2a$10$Xs1h0711a6I8n4c9179t0u.h773sj7/Xc2.0737j5r6v996349/Hm0j6z3yM'
+    CORS(app)
+    CORS(app, resources={r"/*": {"origins": "https://magical-dolphin-be64a8.netlify.app/"}})
+    api = Api(app)
+    db.init_app(app)
+        
+    api.add_resource(Index, '/')
+    api.add_resource(Register, '/register')
+    api.add_resource(LogIn, '/login')
+    api.add_resource(Profile, '/profile/<string:username>')
+    api.add_resource(BookClubRes, '/clubs')
+    api.add_resource(BookClubByID, '/clubs/<int:id>')
+    api.add_resource(JoinClub, '/joinclub')
+    api.add_resource(Books, '/books')
+    api.add_resource(BooksByID, '/books/<int:id>')
+    api.add_resource(AddCurrentBook, '/currentbook')
+    api.add_resource(DelCurrentBook, '/currentbook/<int:id>')
+    api.add_resource(AddPreviousBook, '/previousbooks')
+    api.add_resource(DelPreviousBook, '/previousbooks/<int:id>')
+    api.add_resource(AddBookComment, '/bookcomments')
+    api.add_resource(AddMessage, '/messages')
+
+
+    @app.errorhandler(NotFound)
+    def handle_not_found(e):
+        response = make_response(
+            jsonify({"error": "The requested resource does not exist."}),
+            404
+        )
+        response.headers["Content-Type"] = "application/json"
+        return response
+
+    return app
 
 
 if __name__ == '__main__':
