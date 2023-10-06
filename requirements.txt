@@ -14,7 +14,7 @@ flask-marshmallow==0.15.0
 Flask-Migrate==4.0.5
 Flask-RESTful==0.3.10
 Flask-SQLAlchemy==3.0.3
-ggshield==1.19.1
+ggshield>=1.17.1
 greenlet==3.0.0
 gunicorn==21.2.0
 idna==3.4
