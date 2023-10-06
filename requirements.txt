@@ -3,7 +3,6 @@ aniso8601==9.0.1
 appdirs==1.4.4
 blinker==1.6.2
 certifi==2023.7.22
-cffi==1.16.0
 charset-normalizer==3.3.0
 click==8.1.7
 commonmark==0.9.1
