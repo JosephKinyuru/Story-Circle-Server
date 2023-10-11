@@ -13,8 +13,7 @@ from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, creat
 from models import db , User , BookClub , ClubMember , Book , CurrentBook , PrevioislyReadBook , BookComment , Message
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///story_circle.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///story_circle.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
 
@@ -53,6 +52,19 @@ class BookClubSchema(ma.SQLAlchemyAutoSchema):
 bookClub_schema = BookClubSchema()
 bookClubs_schema = BookClubSchema(many=True)
 
+class BookCommentSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = BookComment
+        load_instance = True
+
+book_comment_schema = BookCommentSchema()
+
+class MessageSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Message
+        load_instance = True
+
+message_schema = MessageSchema()
 
 
 class Index(Resource):
@@ -801,19 +813,23 @@ class DelPreviousBook(Resource):
 class AddBookComment(Resource):
     @jwt_required
     def post(self):
-        try: 
+        try:
+            comment_data = book_comment_schema.load(request.json)
+
             new_comment = BookComment(
-                user_id=request.json['user_id'],
-                book_id=request.json['book_id'],
-                comment=request.json['comment'],
-                rating=request.json['rating'],
+                user_id=comment_data['user_id'],
+                book_id=comment_data['book_id'],
+                comment=comment_data['comment'],
+                rating=comment_data['rating'],
             )
 
             db.session.add(new_comment)
             db.session.commit()
 
+            response_data = book_comment_schema.dump(new_comment)
+
             response = make_response(
-                jsonify({ "message": "Comment created successfully"}),
+                jsonify({"message": "Comment created successfully", "comment": response_data}),
                 201,
             )
             response.headers["Content-Type"] = "application/json"
@@ -822,7 +838,7 @@ class AddBookComment(Resource):
 
         except Exception as e:
             db.session.rollback()
-                
+
             response = make_response(
                 jsonify({"errors": ["validation errors"]}),
                 400
@@ -834,18 +850,22 @@ class AddBookComment(Resource):
 class AddMessage(Resource):
     @jwt_required
     def post(self):
-        try: 
+        try:
+            message_data = message_schema.load(request.json)
+
             new_message = Message(
-                sender_id=request.json['user_id'],
-                club_id=request.json['club_id'],
-                message=request.json['message'],
+                sender_id=message_data['sender_id'],
+                club_id=message_data['club_id'],
+                message=message_data['message'],
             )
 
             db.session.add(new_message)
             db.session.commit()
 
+            response_data = message_schema.dump(new_message)
+
             response = make_response(
-                jsonify({ "message": "Message created successfully"}),
+                jsonify({"message": "Message created successfully", "message": response_data}),
                 201,
             )
             response.headers["Content-Type"] = "application/json"
@@ -854,7 +874,7 @@ class AddMessage(Resource):
 
         except Exception as e:
             db.session.rollback()
-                
+
             response = make_response(
                 jsonify({"errors": ["validation errors"]}),
                 400
@@ -862,7 +882,6 @@ class AddMessage(Resource):
             response.headers["Content-Type"] = "application/json"
 
             return response
-
 
 
 api.add_resource(Index, '/')
