@@ -1,5 +1,5 @@
 import os
-
+from datetime import timedelta
 from flask import Flask, jsonify, request, make_response
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
@@ -12,17 +12,11 @@ from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, creat
 
 from models import db , User , BookClub , ClubMember , Book , CurrentBook , PrevioislyReadBook , BookComment , Message
 
+# These Configerations are for when  running the server locally for deployment configerations look at create_app function
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///story_circle.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
-
-def is_valid_url(url):
-    try:
-        response = requests.head(url)
-        return response.status_code == 200
-    except Exception as e:
-        return False
 
 CORS(app)
 CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
@@ -33,6 +27,13 @@ ma = Marshmallow(app)
 api = Api(app)
 app.config['JWT_SECRET_KEY'] = '$2a$10$Xs1h0711a6I8n4c9179t0u.h773sj7/Xc2.0737j5r6v996349/Hm0j6z3yM'  # Personal / Owner Key For JWT locked resources
 jwt = JWTManager(app)
+
+def is_valid_url(url):
+    try:
+        response = requests.head(url)
+        return response.status_code == 200
+    except Exception as e:
+        return False
 
 class BookSchema(ma.SQLAlchemyAutoSchema):
 
@@ -51,21 +52,6 @@ class BookClubSchema(ma.SQLAlchemyAutoSchema):
 
 bookClub_schema = BookClubSchema()
 bookClubs_schema = BookClubSchema(many=True)
-
-class BookCommentSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = BookComment
-        load_instance = True
-
-book_comment_schema = BookCommentSchema()
-
-class MessageSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Message
-        load_instance = True
-
-message_schema = MessageSchema()
-
 
 class Index(Resource):
     def get(self):
@@ -134,7 +120,7 @@ class LogIn(Resource):
 
             if user and user.check_password(request.json['password']):
                 # Generating a token for the user
-                access_token = create_access_token(identity=request.json['username'])
+                access_token = create_access_token(identity=request.json['username'], expires_delta=timedelta(days=30))
 
                 response = make_response(
                     jsonify({
@@ -265,7 +251,7 @@ class Profile(Resource):
         return response
 
 class BookClubRes(Resource):
-    @jwt_required
+    @jwt_required()
     def post(self):
         try: 
             new_club = BookClub(
@@ -435,7 +421,7 @@ class BookClubByID(Resource):
 
             return response
 
-    @jwt_required
+    @jwt_required()
     def patch(self, id):
         bookclub = BookClub.query.filter_by(id=id).first()
 
@@ -498,9 +484,11 @@ class BookClubByID(Resource):
         return response
 
 class JoinClub(Resource):
-    @jwt_required
+    @jwt_required()
     def post(self):
         try: 
+            current_user = get_jwt_identity()
+
             new_member = ClubMember(
                 club_id = request.json['club_id'],
                 member_id = request.json['user_id'],
@@ -562,7 +550,7 @@ class Books(Resource):
 
             return response
         
-    @jwt_required
+    @jwt_required()
     def post(self):
         try:
             new_book = Book(
@@ -647,6 +635,7 @@ class BooksByID(Resource):
 
             return response
 
+    @jwt_required()
     def patch(self, id):
         book = Book.query.filter_by(id=id).first()
 
@@ -675,6 +664,7 @@ class BooksByID(Resource):
 
             return response
 
+    @jwt_required()
     def delete(self, id):
         book = Book.query.filter_by(id=id).first()
 
@@ -699,7 +689,7 @@ class BooksByID(Resource):
             return response
 
 class AddCurrentBook(Resource):
-    @jwt_required
+    @jwt_required()
     def post(self):
         try: 
             new_current_book = CurrentBook(
@@ -730,7 +720,7 @@ class AddCurrentBook(Resource):
             return response
 
 class DelCurrentBook(Resource):
-    @jwt_required
+    @jwt_required()
     def delete(self, id):
         currentBook = CurrentBook.query.filter_by(club_id=id).first()
 
@@ -755,7 +745,7 @@ class DelCurrentBook(Resource):
             return response
 
 class AddPreviousBook(Resource):
-    @jwt_required
+    @jwt_required()
     def post(self):
         try: 
             new_previous_book = PrevioislyReadBook(
@@ -786,7 +776,7 @@ class AddPreviousBook(Resource):
             return response
 
 class DelPreviousBook(Resource):
-    @jwt_required
+    @jwt_required()
     def delete(self, id):
         previousBook = PrevioislyReadBook.query.filter_by(club_id=id).first()
 
@@ -811,25 +801,22 @@ class DelPreviousBook(Resource):
             return response
 
 class AddBookComment(Resource):
-    @jwt_required
+    @jwt_required()
     def post(self):
         try:
-            comment_data = book_comment_schema.load(request.json)
 
             new_comment = BookComment(
-                user_id=comment_data['user_id'],
-                book_id=comment_data['book_id'],
-                comment=comment_data['comment'],
-                rating=comment_data['rating'],
+                user_id=request.json['user_id'],
+                book_id=request.json['book_id'],
+                comment=request.json['comment'],
+                rating=request.json['rating'],
             )
 
             db.session.add(new_comment)
             db.session.commit()
 
-            response_data = book_comment_schema.dump(new_comment)
-
             response = make_response(
-                jsonify({"message": "Comment created successfully", "comment": response_data}),
+                jsonify({"message": "Comment created successfully"}),
                 201,
             )
             response.headers["Content-Type"] = "application/json"
@@ -848,24 +835,21 @@ class AddBookComment(Resource):
             return response
 
 class AddMessage(Resource):
-    @jwt_required
+    @jwt_required()
     def post(self):
         try:
-            message_data = message_schema.load(request.json)
 
             new_message = Message(
-                sender_id=message_data['sender_id'],
-                club_id=message_data['club_id'],
-                message=message_data['message'],
+                sender_id=request.json['sender_id'],
+                club_id=request.json['club_id'],
+                message=request.json['message'],
             )
 
             db.session.add(new_message)
             db.session.commit()
 
-            response_data = message_schema.dump(new_message)
-
             response = make_response(
-                jsonify({"message": "Message created successfully", "message": response_data}),
+                jsonify({"message": "Message created successfully"}),
                 201,
             )
             response.headers["Content-Type"] = "application/json"
